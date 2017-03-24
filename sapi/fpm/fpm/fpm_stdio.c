@@ -23,12 +23,48 @@
 static int fd_stdout[2];
 static int fd_stderr[2];
 
-int fpm_stdio_init_main() /* {{{ */
+int fpm_stdio_init_open_dev_null() /* {{{ */
 {
 	int fd = open("/dev/null", O_RDWR);
 
+        if (0 > fd) {
+                zlog(ZLOG_SYSERROR, "failed to init stdio: open(\"/dev/null\")");
+                return -1;
+        }
+	return fd;
+}
+/* }}} */
+
+
+int fpm_stdio_stdin_to_dev_null() { /* {{{ */
+	int old_fd, new_fd;
+	old_fd = dup(STDIN_FILENO);
+	new_fd = fpm_stdio_init_open_dev_null();
+	if (0 > new_fd) {
+		return -1;
+	}
+	if (0 > dup2(new_fd, 0)) {
+		return -1;
+	}
+	close(new_fd);
+	return old_fd;
+}
+/* }}} */
+
+int fpm_stdio_stdin_restore_fd(int stdin_fd) { /* {{{ */
+	if (0 > dup2(stdin_fd, 0)) {
+		return -1;
+        }
+	close(stdin_fd);
+	return stdin_fd;
+}
+/* }}} */
+
+int fpm_stdio_init_main() /* {{{ */
+{
+	int fd = fpm_stdio_init_open_dev_null();
+
 	if (0 > fd) {
-		zlog(ZLOG_SYSERROR, "failed to init stdio: open(\"/dev/null\")");
 		return -1;
 	}
 

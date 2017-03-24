@@ -107,6 +107,7 @@ int __riscosify_control = __RISCOSIFY_STRICT_UNIX_SPECS;
 #include "fpm_conf.h"
 #include "fpm_php.h"
 #include "fpm_log.h"
+#include "fpm_stdio.h"
 #include "zlog.h"
 
 #ifndef PHP_WIN32
@@ -1586,6 +1587,7 @@ int main(int argc, char *argv[])
 	int max_requests = 500;
 	int requests = 0;
 	int fcgi_fd = 0;
+	int stdin_fd = 0;
 	fcgi_request *request;
 	char *fpm_config = NULL;
 	char *fpm_prefix = NULL;
@@ -1963,7 +1965,14 @@ consult the installation file that came with this distribution, or visit \n\
 
 			fpm_request_executing();
 
+			stdin_fd = fpm_stdio_stdin_to_dev_null();
+
 			php_execute_script(&file_handle);
+
+			stdin_fd = fpm_stdio_stdin_restore_fd(stdin_fd);
+			if (UNEXPECTED(0 > stdin_fd)) {
+				// @todo probably kill child process here
+			}
 
 fastcgi_request_done:
 			if (EXPECTED(primary_script)) {
